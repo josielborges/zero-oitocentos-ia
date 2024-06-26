@@ -1,10 +1,10 @@
-import os
 from enum import Enum
 
 
 class Model(Enum):
     GPT_3_5 = 'gpt-3.5-turbo'
     GPT_4O = 'gpt-4o'
+    EMBEDDING = 'text-embedding-3-small'
 
 
 def load(filename):

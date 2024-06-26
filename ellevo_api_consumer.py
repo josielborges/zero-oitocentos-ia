@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# swagger https://servicos.fiescnet.com.br/swagger/ui/index
 API_URL = 'https://servicos.fiescnet.com.br/api/'
 API_TOKEN_URL = API_URL + 'seguranca/token'
 
@@ -35,6 +36,32 @@ def get_token():
     return response.json().get('access_token')
 
 
+def get_task(task_id):
+    headers = {
+        'Authorization': 'Bearer ' + get_token()
+    }
+    response = requests.get(f'{API_URL}/tarefa/{task_id}', headers=headers)
+    return response.json().get('titulo'), process_response(response.json().get('descricao'))
+
+
+def get_messages(task_id):
+    i = 1
+    messages = []
+    headers = {
+        'Authorization': 'Bearer ' + get_token()
+    }
+    data_conclusao = ''
+    while True:
+        response = requests.get(f'{API_URL}/mob/providencia/tarefa/{task_id}/providencia/{i}', headers=headers)
+        if response.status_code != 200:
+            break
+        messages.append(process_response(response.json().get('descricao')))
+        data_conclusao = response.json().get('data')
+        i += 1
+    messages.append(f'----------\nData de conclusão: {data_conclusao}')
+    return messages
+
+
 def get_cleaned_text(text):
     cleaned_text = re.sub(r'\n+', '\n', text)
     cleaned_text = re.sub(r'\xa0+', '', cleaned_text)
@@ -47,7 +74,7 @@ def get_cleaned_text(text):
 
 
 def process_response(response_text):
-    soup = BeautifulSoup(response_text, 'html.parser')
+    soup = BeautifulSoup(html.unescape(response_text), 'html.parser')
 
     for div in soup.find_all("div"):
         div.insert(0, "\n")
@@ -55,47 +82,6 @@ def process_response(response_text):
 
     return get_cleaned_text(soup.text)
 
-
-def get_messages(task_id):
-    i = 1
-    messages = []
-    headers = {
-        'Authorization': 'Bearer ' + get_token()
-    }
-    while True:
-        response = requests.get(f'{API_URL}/mob/providencia/tarefa/{task_id}/providencia/{i}', headers=headers)
-        if response.status_code != 200:
-            break
-        messages.append(process_response(html.unescape(response.json().get('descricao'))))
-        i += 1
-
-    return messages
-
-
-def get_task(task_id):
-    headers = {
-        'Authorization': 'Bearer ' + get_token()
-    }
-    response = requests.get(f'{API_URL}/tarefa/{task_id}', headers=headers)
-    # print(response.json())
-    return response.json().get('titulo'), process_response(html.unescape(response.json().get('descricao')))
-
-
-# task = get_task(1070227)
-# messages =
-
-# task_id = 1070227
-# task_title, task_text = get_task(task_id)
-# task_messages = get_messages(task_id)
-#
-# print(f'Id da Tarefa: \n{task_id}\n')
-# print(f'Título da Tarefa: \n{task_title}\n')
-# print(f'Texto da Tarefa: {task_text}\n')
-# i = 1
-#
-# for message in get_messages(task_id):
-#     print(f'Providência {i}:{message}')
-#     i += 1
 
 def get_task_to_ia(task_id):
     task_title, task_text = get_task(task_id)
